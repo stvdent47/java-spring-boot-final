@@ -1,0 +1,234 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          trusted-proxies: "127\\.0\\.0\\.1|localhost"
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - "http://localhost:3000"
+              - "http://localhost:8080"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 3600
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+
+      routes:
+        - id: booking-auth
+          uri: lb://booking-service
+          predicates:
+            - Path=/api/auth/register, /api/auth/login
+            - Method=POST
+          filters:
+            - RewritePath=/api/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: booking-service
+                fallbackUri: forward:/fallback/booking
+
+        - id: booking-auth-me
+          uri: lb://booking-service
+          predicates:
+            - Path=/api/auth/me
+            - Method=GET
+          filters:
+            - RewritePath=/api/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: booking-service
+                fallbackUri: forward:/fallback/booking
+
+        - id: booking-auth-admin
+          uri: lb://booking-service
+          predicates:
+            - Path=/api/auth/admin/**
+            - Method=POST
+          filters:
+            - RewritePath=/api/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: booking-service
+                fallbackUri: forward:/fallback/booking
+
+        - id: booking-operations
+          uri: lb://booking-service
+          predicates:
+            - Path=/api/bookings, /api/bookings/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: booking-service
+                fallbackUri: forward:/fallback/booking
+
+        - id: booking-api-docs
+          uri: lb://booking-service
+          predicates:
+            - Path=/api/booking-service/api-docs, /api/booking-service/api-docs/**
+          filters:
+            - RewritePath=/api/booking-service/(?<segment>.*), /${segment}
+
+        - id: hotel-public-list
+          uri: lb://hotel-service
+          predicates:
+            - Path=/api/hotels, /api/hotels/search, /api/hotels/city/**, /api/hotels/country/**, /api/hotels/stars/**
+            - Method=GET
+          filters:
+            - RewritePath=/api/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: hotel-service
+                fallbackUri: forward:/fallback/hotel
+
+        - id: hotel-public-get
+          uri: lb://hotel-service
+          predicates:
+            - Path=/api/hotels/{id}
+            - Method=GET
+          filters:
+            - RewritePath=/api/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: hotel-service
+                fallbackUri: forward:/fallback/hotel
+
+        - id: hotel-admin
+          uri: lb://hotel-service
+          predicates:
+            - Path=/api/hotels, /api/hotels/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - RewritePath=/api/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: hotel-service
+                fallbackUri: forward:/fallback/hotel
+
+        - id: rooms-public
+          uri: lb://hotel-service
+          predicates:
+            - Path=/api/rooms, /api/rooms/available, /api/rooms/recommend, /api/rooms/hotel/**
+            - Method=GET
+          filters:
+            - RewritePath=/api/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: hotel-service
+                fallbackUri: forward:/fallback/hotel
+
+        - id: rooms-public-get
+          uri: lb://hotel-service
+          predicates:
+            - Path=/api/rooms/{id}
+            - Method=GET
+          filters:
+            - RewritePath=/api/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: hotel-service
+                fallbackUri: forward:/fallback/hotel
+
+        - id: rooms-admin
+          uri: lb://hotel-service
+          predicates:
+            - Path=/api/rooms, /api/rooms/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - RewritePath=/api/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: hotel-service
+                fallbackUri: forward:/fallback/hotel
+
+        - id: hotel-api-docs
+          uri: lb://hotel-service
+          predicates:
+            - Path=/api/hotel-service/api-docs, /api/hotel-service/api-docs/**
+          filters:
+            - RewritePath=/api/hotel-service/(?<segment>.*), /${segment}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka:eureka-secret@localhost:8761/eureka/
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+    instances:
+      booking-service:
+        base-config: default
+      hotel-service:
+        base-config: default
+
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 5s
+    instances:
+      booking-service:
+        base-config: default
+      hotel-service:
+        base-config: default
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: Booking Service
+        url: /api/booking-service/api-docs
+      - name: Hotel Service
+        url: /api/hotel-service/api-docs
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+    io.github.resilience4j: DEBUG
+    mephi: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{traceId:-},%X{spanId:-}] %-5level [%thread] %logger{36} - %msg%n"
