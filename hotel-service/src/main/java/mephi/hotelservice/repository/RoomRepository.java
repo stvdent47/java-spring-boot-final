@@ -38,16 +38,16 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
         @Param("roomType") RoomType roomType
     );
 
-    @Query("SELECT r FROM Room r WHERE r.available = true ORDER BY r.timesBooked ASC")
+    @Query("SELECT r FROM Room r WHERE r.available = true ORDER BY r.timesBooked ASC, r.id ASC")
     List<Room> findAvailableRoomsOrderByTimesBookedAsc();
 
-    @Query("SELECT r FROM Room r WHERE r.hotel.id = :hotelId AND r.available = true ORDER BY r.timesBooked ASC")
+    @Query("SELECT r FROM Room r WHERE r.hotel.id = :hotelId AND r.available = true ORDER BY r.timesBooked ASC, r.id ASC")
     List<Room> findAvailableRoomsByHotelIdOrderByTimesBookedAsc(@Param("hotelId") Long hotelId);
 
-    @Query("SELECT r FROM Room r WHERE r.available = true AND r.roomType = :roomType ORDER BY r.timesBooked ASC")
+    @Query("SELECT r FROM Room r WHERE r.available = true AND r.roomType = :roomType ORDER BY r.timesBooked ASC, r.id ASC")
     List<Room> findAvailableRoomsByTypeOrderByTimesBookedAsc(@Param("roomType") RoomType roomType);
 
-    @Query("SELECT r FROM Room r WHERE r.available = true AND r.maxOccupancy >= :guestCount ORDER BY r.timesBooked ASC")
+    @Query("SELECT r FROM Room r WHERE r.available = true AND r.maxOccupancy >= :guestCount ORDER BY r.timesBooked ASC, r.id ASC")
     List<Room> findAvailableRoomsByCapacityOrderByTimesBookedAsc(@Param("guestCount") Integer guestCount);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
