@@ -72,6 +72,71 @@ A microservices-based hotel booking platform built with Spring Boot 4.0.1 and Sp
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
+## Project Structure
+
+```
+.
+├── pom.xml                              # Parent POM (module aggregator)
+├── README.md
+├── CLAUDE.md
+│
+├── eureka-server/                       # Service Discovery (port 8761)
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/mephi/eureka/
+│       │   ├── EurekaServerApplication.java
+│       │   └── config/EurekaSecurityConfig.java
+│       └── resources/application.yml
+│
+├── api-gateway/                         # API Gateway (port 8080)
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/mephi/gateway/
+│       │   ├── ApiGatewayApplication.java
+│       │   ├── controller/FallbackController.java
+│       │   └── filter/
+│       │       ├── LoggingFilter.java
+│       │       └── TracingFilter.java
+│       └── resources/application.yml
+│
+├── booking-service/                     # Booking & Auth Service (port 8082)
+│   ├── pom.xml
+│   └── src/
+│       ├── main/java/mephi/bookingservice/
+│       │   ├── client/                  # OpenFeign clients for Hotel Service
+│       │   ├── config/                  # Security, Feign, OpenAPI configs
+│       │   ├── controller/              # AuthController, BookingController
+│       │   ├── dto/                     # Request/Response DTOs
+│       │   ├── entity/                  # User, Booking, Role, BookingStatus
+│       │   ├── exception/               # Custom exceptions & global handler
+│       │   ├── mapper/                  # MapStruct mappers
+│       │   ├── repository/              # Spring Data JPA repositories
+│       │   └── service/                 # BookingService, UserService, JwtService
+│       ├── main/resources/
+│       │   ├── application.yml
+│       │   ├── data.sql                 # Initial data (admin user)
+│       │   └── keys/                    # RSA keys (private.pem, public.pem)
+│       └── test/                        # Unit & integration tests
+│
+└── hotel-service/                       # Hotel & Room Service (port 8081)
+    ├── pom.xml
+    └── src/
+        ├── main/java/mephi/hotelservice/
+        │   ├── config/                  # Security, OpenAPI configs
+        │   ├── controller/              # HotelController, RoomController
+        │   ├── dto/                     # Request/Response DTOs
+        │   ├── entity/                  # Hotel, Room, RoomType
+        │   ├── exception/               # Custom exceptions & global handler
+        │   ├── mapper/                  # MapStruct mappers
+        │   ├── repository/              # Spring Data JPA repositories
+        │   └── service/                 # HotelService, RoomService
+        ├── main/resources/
+        │   ├── application.yml
+        │   ├── data.sql                 # Initial data (hotels, rooms)
+        │   └── keys/                    # RSA public key (public.pem)
+        └── test/                        # Unit & integration tests
+```
+
 ## Architecture Decision Records (ADR)
 
 ### ADR-001: Microservices Architecture
