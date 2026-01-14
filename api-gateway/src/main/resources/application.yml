@@ -158,6 +158,18 @@ spring:
                 name: hotel-service
                 fallbackUri: forward:/fallback/hotel
 
+        - id: statistics
+          uri: lb://hotel-service
+          predicates:
+            - Path=/api/statistics, /api/statistics/**
+            - Method=GET
+          filters:
+            - RewritePath=/api/(?<segment>.*), /${segment}
+            - name: CircuitBreaker
+              args:
+                name: hotel-service
+                fallbackUri: forward:/fallback/hotel
+
         - id: hotel-api-docs
           uri: lb://hotel-service
           predicates:

@@ -68,6 +68,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/rooms/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/rooms/**").hasRole("ADMIN")
 
+                .requestMatchers("/statistics/**").hasRole("ADMIN")
+
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
