@@ -15,6 +15,8 @@ import mephi.bookingservice.exception.BookingException;
 import mephi.bookingservice.exception.ResourceNotFoundException;
 import mephi.bookingservice.mapper.BookingMapper;
 import mephi.bookingservice.repository.BookingRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +34,12 @@ public class BookingService {
 
     @Transactional
     public BookingResponse createBooking(BookingRequest request, String username) {
-        log.info("Creating booking for user: {}, room: {}", username, request.getRoomId());
+        log.info(
+            "Creating booking for user: {}, room: {}, autoSelect: {}",
+            username,
+            request.getRoomId(),
+            request.getAutoSelect()
+        );
 
         if (!request.getCheckOutDate().isAfter(request.getCheckInDate())) {
             throw new BookingException("Check-out date must be after check-in date");
@@ -40,8 +47,39 @@ public class BookingService {
 
         User user = userService.findByUsername(username);
 
+        Long roomId = request.getRoomId();
+        Long hotelId = request.getHotelId();
+
+        if (Boolean.TRUE.equals(request.getAutoSelect())) {
+            log.info("Auto-selecting room for user: {}, hotelId: {}, guestCount: {}", username, hotelId, request.getGuestCount());
+
+            List<RoomResponse> recommendedRooms = hotelServiceClient.getRecommendedRooms(
+                hotelId,
+                null,
+                request.getGuestCount()
+            );
+
+            if (recommendedRooms == null || recommendedRooms.isEmpty()) {
+                throw new BookingException("No available rooms found matching your criteria");
+            }
+
+            RoomResponse selectedRoom = recommendedRooms.getFirst();
+            roomId = selectedRoom.getId();
+            hotelId = selectedRoom.getHotelId();
+
+            log.info("Auto-selected room: {} (timesBooked: {}) for user: {}", roomId, selectedRoom.getTimesBooked(), username);
+        }
+        else {
+            if (roomId == null) {
+                throw new BookingException("Room ID is required when autoSelect is false");
+            }
+            if (hotelId == null) {
+                throw new BookingException("Hotel ID is required when autoSelect is false");
+            }
+        }
+
         List<Booking> overlapping = bookingRepository.findOverlappingBookings(
-            request.getRoomId(),
+            roomId,
             request.getCheckInDate(),
             request.getCheckOutDate(),
             List.of(BookingStatus.PENDING, BookingStatus.CONFIRMED)
@@ -52,6 +90,8 @@ public class BookingService {
         }
 
         Booking booking = bookingMapper.toEntity(request);
+        booking.setRoomId(roomId);
+        booking.setHotelId(hotelId);
         booking.setUser(user);
         booking.setStatus(BookingStatus.PENDING);
         booking = bookingRepository.save(booking);
@@ -67,7 +107,7 @@ public class BookingService {
                 .guestCount(request.getGuestCount())
                 .build();
 
-            AvailabilityResponse availResponse = hotelServiceClient.confirmAvailability(request.getRoomId(), availRequest);
+            AvailabilityResponse availResponse = hotelServiceClient.confirmAvailability(roomId, availRequest);
 
             if (availResponse.isConfirmed()) {
                 booking.setStatus(BookingStatus.CONFIRMED);
@@ -104,7 +144,7 @@ public class BookingService {
             log.error("Error during booking confirmation, compensating: {}", e.getMessage());
 
             try {
-                hotelServiceClient.releaseRoom(request.getRoomId(), requestId);
+                hotelServiceClient.releaseRoom(booking.getRoomId(), requestId);
             }
             catch (Exception releaseEx) {
                 log.error("Failed to release room during compensation: {}", releaseEx.getMessage());
@@ -160,6 +200,27 @@ public class BookingService {
         List<Booking> bookings = bookingRepository.findByStatus(status);
 
         return bookingMapper.toResponseList(bookings);
+    }
+    @Transactional(readOnly = true)
+    public Page<BookingResponse> getBookingsByUserPaged(String username, Pageable pageable) {
+        User user = userService.findByUsername(username);
+        Page<Booking> bookings = bookingRepository.findByUserIdPaged(user.getId(), pageable);
+
+        return bookings.map(bookingMapper::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<BookingResponse> getAllBookingsPaged(Pageable pageable) {
+        Page<Booking> bookings = bookingRepository.findAllPaged(pageable);
+
+        return bookings.map(bookingMapper::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<BookingResponse> getBookingsByStatusPaged(BookingStatus status, Pageable pageable) {
+        Page<Booking> bookings = bookingRepository.findByStatusPaged(status, pageable);
+
+        return bookings.map(bookingMapper::toResponse);
     }
 
     @Transactional

@@ -2,6 +2,8 @@ package mephi.bookingservice.repository;
 
 import mephi.bookingservice.entity.Booking;
 import mephi.bookingservice.entity.BookingStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,6 +29,15 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT b FROM Booking b WHERE b.user.id = :userId ORDER BY b.createdAt DESC")
     List<Booking> findByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
+
+    @Query("SELECT b FROM Booking b WHERE b.user.id = :userId")
+    Page<Booking> findByUserIdPaged(@Param("userId") Long userId, Pageable pageable);
+
+    @Query("SELECT b FROM Booking b")
+    Page<Booking> findAllPaged(Pageable pageable);
+
+    @Query("SELECT b FROM Booking b WHERE b.status = :status")
+    Page<Booking> findByStatusPaged(@Param("status") BookingStatus status, Pageable pageable);
 
     @Query("SELECT b FROM Booking b WHERE b.roomId = :roomId AND b.status IN :statuses " +
         "AND ((b.checkInDate <= :checkOut AND b.checkOutDate >= :checkIn))")

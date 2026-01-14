@@ -14,6 +14,9 @@ import mephi.bookingservice.dto.BookingResponse;
 import mephi.bookingservice.dto.hotel.RoomResponse;
 import mephi.bookingservice.entity.BookingStatus;
 import mephi.bookingservice.service.BookingService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -52,17 +55,23 @@ public class BookingController {
     }
 
     @GetMapping("/my")
-    @Operation(summary = "Get my bookings", description = "Get all bookings for the current user")
+    @Operation(summary = "Get my bookings", description = "Get all bookings for the current user with pagination")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Bookings retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Not authenticated")
     })
-    public ResponseEntity<List<BookingResponse>> getMyBookings(
-        @AuthenticationPrincipal UserDetails userDetails
+    public ResponseEntity<Page<BookingResponse>> getMyBookings(
+        @AuthenticationPrincipal UserDetails userDetails,
+        @PageableDefault(size = 10, sort = "createdAt") Pageable pageable
     ) {
-        log.debug("Getting bookings for user: {}", userDetails.getUsername());
+        log.debug(
+            "Getting bookings for user: {} (page: {}, size: {})",
+            userDetails.getUsername(),
+            pageable.getPageNumber(),
+            pageable.getPageSize()
+        );
 
-        List<BookingResponse> bookings = bookingService.getBookingsByUser(userDetails.getUsername());
+        Page<BookingResponse> bookings = bookingService.getBookingsByUserPaged(userDetails.getUsername(), pageable);
 
         return ResponseEntity.ok(bookings);
     }
@@ -127,34 +136,37 @@ public class BookingController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get all bookings (Admin)", description = "Get all bookings in the system")
+    @Operation(summary = "Get all bookings (Admin)", description = "Get all bookings in the system with pagination")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Bookings retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Not authenticated"),
         @ApiResponse(responseCode = "403", description = "Not authorized")
     })
-    public ResponseEntity<List<BookingResponse>> getAllBookings() {
-        log.debug("Getting all bookings (admin)");
+    public ResponseEntity<Page<BookingResponse>> getAllBookings(
+        @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
+    ) {
+        log.debug("Getting all bookings (admin) - page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
 
-        List<BookingResponse> bookings = bookingService.getAllBookings();
+        Page<BookingResponse> bookings = bookingService.getAllBookingsPaged(pageable);
 
         return ResponseEntity.ok(bookings);
     }
 
     @GetMapping("/status/{status}")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get bookings by status (Admin)", description = "Get all bookings with a specific status")
+    @Operation(summary = "Get bookings by status (Admin)", description = "Get all bookings with a specific status with pagination")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Bookings retrieved successfully"),
         @ApiResponse(responseCode = "401", description = "Not authenticated"),
         @ApiResponse(responseCode = "403", description = "Not authorized")
     })
-    public ResponseEntity<List<BookingResponse>> getBookingsByStatus(
-        @Parameter(description = "Booking status") @PathVariable BookingStatus status
+    public ResponseEntity<Page<BookingResponse>> getBookingsByStatus(
+        @Parameter(description = "Booking status") @PathVariable BookingStatus status,
+        @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
     ) {
-        log.debug("Getting bookings by status: {}", status);
+        log.debug("Getting bookings by status: {} (page: {}, size: {})", status, pageable.getPageNumber(), pageable.getPageSize());
 
-        List<BookingResponse> bookings = bookingService.getBookingsByStatus(status);
+        Page<BookingResponse> bookings = bookingService.getBookingsByStatusPaged(status, pageable);
 
         return ResponseEntity.ok(bookings);
     }

@@ -19,6 +19,9 @@ public class BookingRequest {
     @NotNull(message = "Hotel ID is required")
     private Long hotelId;
 
+    @Builder.Default
+    private Boolean autoSelect = false;
+
     @NotNull(message = "Check-in date is required")
     @FutureOrPresent(message = "Check-in date must be today or in the future")
     private LocalDate checkInDate;
