@@ -399,6 +399,7 @@ curl "http://localhost:8080/api/rooms/available?guestCount=2"
 ### 6. Create a Booking
 
 ```bash
+# Manual room selection
 curl -X POST http://localhost:8080/api/bookings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
@@ -410,12 +411,29 @@ curl -X POST http://localhost:8080/api/bookings \
     "guestCount": 2,
     "specialRequests": "Late check-in"
   }'
+
+# Auto-select room (picks the least booked room matching criteria)
+curl -X POST http://localhost:8080/api/bookings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "autoSelect": true,
+    "hotelId": 1,
+    "checkInDate": "2025-06-01",
+    "checkOutDate": "2025-06-05",
+    "guestCount": 2
+  }'
 ```
 
-### 7. View My Bookings
+### 7. View My Bookings (with pagination)
 
 ```bash
+# Default pagination (page 0, size 10)
 curl http://localhost:8080/api/bookings/my \
+  -H "Authorization: Bearer <token>"
+
+# Custom pagination
+curl "http://localhost:8080/api/bookings/my?page=0&size=5&sort=createdAt,desc" \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -468,17 +486,27 @@ curl -X POST "http://localhost:8080/api/bookings/1/cancel?reason=Change%20of%20p
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/` | Yes | Create booking |
-| GET | `/my` | Yes | Get user's bookings |
+| POST | `/` | Yes | Create booking (supports `autoSelect: true` for auto room selection) |
+| GET | `/my` | Yes | Get user's bookings (paginated: `?page=0&size=10&sort=createdAt,desc`) |
 | GET | `/{id}` | Yes | Get booking by ID |
 | GET | `/reference/{ref}` | Yes | Get booking by reference |
 | POST | `/{id}/cancel` | Yes | Cancel booking |
-| GET | `/` | Admin | List all bookings |
-| GET | `/status/{status}` | Admin | Get bookings by status |
+| GET | `/` | Admin | List all bookings (paginated) |
+| GET | `/status/{status}` | Admin | Get bookings by status (paginated) |
 | GET | `/rooms/recommend` | Yes | Get room recommendations |
 | GET | `/rooms/{roomId}` | Yes | Get room details |
 
 Booking statuses: `PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`, `FAILED`
+
+### Statistics (`/api/statistics`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/system` | Admin | Get system-wide statistics |
+| GET | `/hotels` | Admin | Get all hotels statistics |
+| GET | `/hotels/{hotelId}` | Admin | Get specific hotel statistics |
+
+Statistics include: occupancy rates, total bookings, room type distribution, most/least booked hotels.
 
 ## Testing
 
