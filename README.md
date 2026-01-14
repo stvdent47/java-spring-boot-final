@@ -283,6 +283,31 @@ java -jar booking-service/target/booking-service-1.0.0-SNAPSHOT.jar
 | Booking Service | http://localhost:8082 | Direct access |
 | Hotel Service | http://localhost:8081 | Direct access |
 
+### Initial Data
+
+The system is pre-populated with demo data via `data.sql` files that run on startup.
+
+**Default Users** (password for all: `password`):
+
+| Username   | Email              | Role  |
+|------------|--------------------|-------|
+| admin      | admin@hotel.com    | ADMIN |
+| john_doe   | john@example.com   | USER  |
+| jane_smith | jane@example.com   | USER  |
+| bob_wilson | bob@example.com    | USER  |
+
+**Pre-loaded Hotels:**
+
+| Hotel              | City     | Stars | Rooms                              |
+|--------------------|----------|-------|------------------------------------|
+| Grand Plaza Hotel  | New York | 5     | 6 rooms (Standard, Deluxe, Suite)  |
+| Seaside Resort     | Miami    | 4     | 5 rooms (Standard, Deluxe, Suite)  |
+| Mountain View Lodge| Denver   | 3     | 4 rooms (Standard, Deluxe)         |
+| City Center Inn    | Chicago  | 3     | 3 rooms (Standard, Deluxe)         |
+| Royal Palace Hotel | Las Vegas| 5     | 5 rooms (Deluxe, Suite, Presidential) |
+
+**Sample Bookings:** 4 bookings in various statuses (COMPLETED, CONFIRMED, CANCELLED)
+
 ## Using the System
 
 All API requests go through the API Gateway at `http://localhost:8080`.
