@@ -26,6 +26,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -194,7 +198,8 @@ class BookingControllerTest {
         @Test
         @DisplayName("should return user's bookings when authenticated")
         void should_ReturnUserBookings_When_Authenticated() throws Exception {
-            given(bookingService.getBookingsByUser("john_doe")).willReturn(List.of(bookingResponse));
+            given(bookingService.getBookingsByUserPaged(eq("john_doe"), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of(bookingResponse)));
 
             UserDetails authUser = User.builder()
                 .username("john_doe")
@@ -207,14 +212,15 @@ class BookingControllerTest {
                     .with(user(authUser))
             )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].bookingReference", is("BK-123456")));
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].bookingReference", is("BK-123456")));
         }
 
         @Test
         @DisplayName("should return empty list when user has no bookings")
         void should_ReturnEmptyList_When_NoBookings() throws Exception {
-            given(bookingService.getBookingsByUser("john_doe")).willReturn(List.of());
+            given(bookingService.getBookingsByUserPaged(eq("john_doe"), any(Pageable.class)))
+                .willReturn(Page.empty());
 
             UserDetails authUser = User.builder()
                 .username("john_doe")
@@ -227,7 +233,7 @@ class BookingControllerTest {
                     .with(user(authUser))
             )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.content", hasSize(0)));
         }
 
         @Test
@@ -408,7 +414,8 @@ class BookingControllerTest {
         @Test
         @DisplayName("should return all bookings when admin")
         void should_ReturnAllBookings_When_Admin() throws Exception {
-            given(bookingService.getAllBookings()).willReturn(List.of(bookingResponse));
+            given(bookingService.getAllBookingsPaged(any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of(bookingResponse)));
 
             UserDetails adminUser = User.builder()
                 .username("admin")
@@ -421,7 +428,7 @@ class BookingControllerTest {
                     .with(user(adminUser))
             )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.content", hasSize(1)));
         }
 
         @Test
@@ -447,8 +454,8 @@ class BookingControllerTest {
         @Test
         @DisplayName("should return bookings filtered by status when admin")
         void should_ReturnBookingsByStatus_When_Admin() throws Exception {
-            given(bookingService.getBookingsByStatus(BookingStatus.CONFIRMED))
-                .willReturn(List.of(bookingResponse));
+            given(bookingService.getBookingsByStatusPaged(eq(BookingStatus.CONFIRMED), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of(bookingResponse)));
 
             UserDetails adminUser = User.builder()
                 .username("admin")
@@ -461,8 +468,8 @@ class BookingControllerTest {
                     .with(user(adminUser))
             )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].status", is("CONFIRMED")));
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].status", is("CONFIRMED")));
         }
 
         @Test
